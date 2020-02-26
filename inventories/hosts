@@ -1,4 +1,4 @@
-laeticia_serv ansible_hosts=10.5.169.236 ansible_user=root
+laeticia_serv ansible_host=10.5.169.236 ansible_user=root
 
 [wordpress]
 laeticia_serv
