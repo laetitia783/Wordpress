@@ -1,0 +1,8 @@
+---
+
+- name: ping
+  hosts: vm_cible
+  become: yes
+  tasks:
+    - name: ping_machine_cible
+      ping:
