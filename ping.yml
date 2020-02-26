@@ -1,7 +1,7 @@
 ---
 
 - name: ping
-  hosts: vm_cible
+  hosts: wordpress
   become: yes
   tasks:
     - name: ping_machine_cible
