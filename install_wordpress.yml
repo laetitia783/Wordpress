@@ -69,15 +69,10 @@
         - 127.0.0.1
         - ::1
         - localhost
-        
+
     - name: Create my.cnf
       template:
         src: templates/mysql/my.cnf.j2
-        dest: /root/.my.cnf
-
-    - name: Create mysqld.cnf
-      template:
-        src: templates/mysql/mysqld.cnf.j2
         dest: /root/.my.cnf
 
     - name: Install nginx
@@ -90,7 +85,21 @@
         name: nginx
         state: started
 
+    - name: Check PHP version
+      command: php --version
+      register: php_version
+    - set_fact:
+      fpm_sock: /run/php/php7.{{ php_version.stdout.split(" ")[1].split(".")[1] }}-fpm.sock
+      when: ansible_distribution == 'Ubuntu'
+
     - name: Create nginx config
       template:
         src: templates/nginx/default.j2
         dest: /etc/nginx/sites-available/default
+      notify: restart nginx
+
+  handlers:
+    - name: Create nginx config
+      service:
+        name: nginx
+        status: restarted
