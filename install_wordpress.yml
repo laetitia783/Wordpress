@@ -17,7 +17,7 @@
         name: "{{ item }}"
         state: present
       loop:
-        - PHP
+        - php
         - php-fpm
         - php-mysql
         - php-xml
