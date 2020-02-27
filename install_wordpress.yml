@@ -102,4 +102,4 @@
     - name: restart nginx
       service:
         name: nginx
-        status: restarted
+        state: restarted
