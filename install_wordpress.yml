@@ -21,8 +21,16 @@
         - php-fpm
         - php-mysql
         - php-xml
-
     - name: Remove apache2
       package:
         name: apache2
         state: absent
+
+# mysql
+    - name: Install Mysql
+      package:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - mysql-server
+        - python-mysqldb
