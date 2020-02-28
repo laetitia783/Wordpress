@@ -6,6 +6,12 @@
       tasks:
         - name: ping_machine_cible
           ping:
+
+#Outils
+        - name: Install Unzip
+          package:
+            name: unzip
+            state: present
 #PHP
         - name: Add the ondrej PHP PPA
           apt_repository:
