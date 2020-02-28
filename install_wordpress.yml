@@ -1,112 +1,107 @@
 ---
 
-- name: ping
-  hosts: wordpress
-  become: yes
-  tasks:
-    - name: ping_machine_cible
-      ping:
-
+    - name: ping machine cible
+      hosts: wordpress
+      become: yes
+      tasks:
+        - name: ping_machine_cible
+          ping:
 #PHP
-    - name: Add the ondrej PHP PPA
-      apt_repository:
-        repo: 'ppa:ondrej/php'
+        - name: Add the ondrej PHP PPA
+          apt_repository:
+            repo: 'ppa:ondrej/php'
+        - name: Install php
+          package:
+            name: "{{ item }}"
+            state: present
+          loop:
+            - php
+            - php-fpm
+            - php-mysql
+            - php-xml
+        - name: Remove apache2
+          package:
+            name: apache2
+            state: absent
+#mysql
+        - name: Install mysql
+          package:
+            name: "{{item}}"
+            state: present
+          loop:
+            - mysql-server
+            - python-mysqldb
 
-    - name: Install PHP
-      package:
-        name: "{{ item }}"
-        state: present
-      loop:
-        - php
-        - php-fpm
-        - php-mysql
-        - php-xml
-    - name: Remove apache2
-      package:
-        name: apache2
-        state: absent
+        - name: Create mysqld.cnf
+          template:
+            src: templates/mysql/mysqld.cnf.j2
+            dest: /etc/mysql/mysql.conf.d/mysqld.cnf
+          notify: restart mysql
 
-# mysql
-    - name: Install Mysql
-      package:
-        name: "{{ item }}"
-        state: present
-      loop:
-        - mysql-server
-        - python-mysqldb
+        - name: Generate new root password
+          command: openssl rand -hex 7
+          args:
+            creates: /root/.my.cnf
+          register: mysql_new_root_pass
 
-    - name: Create mysqld.cnf
-      template:
-        src: templates/mysql/mysqld.cnf.j2
-        dest: /etc/mysql/mysql.conf.d/mysqld.cnf
-      notify: restart mysql
+        - name: Remove anonymous users
+          mysql_user:
+            name: ""
+            state: absent
+          when: mysql_new_root_pass.changed
 
-    - name: Generate new root password
-      command: openssl rand -hex 7
-      args:
-        creates: /root/.my.cnf
-      register: mysql_new_root_pass
+        - name: remove test database
+          mysql_db:
+            name: test
+            state: absent
+          when: mysql_new_root_pass.changed
 
+        - name: Output new root password
+          debug:
+            msg: "New root password is {{mysql_new_root_pass.stdout}}"
+          when: mysql_new_root_pass.changed
 
-    - name: Remove anonymous users
-      mysql_user:
-        name: ""
-        state: absent
-      when: mysql_new_root_pass.changed
+        - name: Update root password
+          mysql_user:
+            name: root
+            host: "{{ item }}"
+            password: "{{mysql_new_root_pass.stdout}}"
+          loop:
+            - "{{ ansible_hostname }}"
+            - 127.0.0.1
+            - ::1
+            - localhost
+        - name: Create my.cnf
+          template:
+            src: templates/mysql/my.cnf.j2
+            dest: /root/.my.cnf
+#NginX
+#Nginx
+        - name: Install Nginx
+          package:
+            name: nginx
+            state: present
 
-    - name: Remove test database
-      mysql_db:
-        name: test
-        state: absent
-      when: mysql_new_root_pass.changed
+        - name: Start Nginx
+          service:
+            name: nginx
+            state: started
+            enabled: yes
 
-    - name: Output new root password
-      debug:
-        msg: "New root password is {{mysql_new_root_pass.stdout}}"
-      when: mysql_new_root_pass.changed
+        - name: Create nginx config
+          template:
+            src: templates/nginx/default.j2
+            dest: /etc/nginx/sites-available/default
+          notify: restart nginx
 
-    - name: Update root password
-      mysql_user:
-        name: root
-        host: "{{ item }}"
-        password: "{{ mysql_new_root_pass.stdout }}"
-      loop:
-        - "{{ ansible_hostname }}"
-        - 127.0.0.1
-        - ::1
-        - localhost
-      when: mysql_new_root_pass.changed
+      handlers:
+        - name: restart nginx
+          service:
+            name: nginx
+            state: restarted
 
-    - name: Create my.cnf
-      template:
-        src: templates/mysql/my.cnf.j2
-        dest: /root/.my.cnf
-      when: mysql_new_root_pass.changed
-
-    - name: Install nginx
-      package:
-        name: nginx
-        state: present
-
-    - name: Start nginx
-      service:
-        name: nginx
-        state: started
-        enabled: yes
-
-    - name: Create nginx config
-      template:
-        src: templates/nginx/default.j2
-        dest: /etc/nginx/sites-available/default
-      notify: restart nginx
-
-  handlers:
-    - name: restart nginx
-      service:
-        name: nginx
-        state: restarted
-
-    - name: restart mysql
-      service:
-        name: mysql
-        state: restarted
+      handlers:
+        - name: restart mysql
+          service:
+            name: mysql
+            state: restarted
