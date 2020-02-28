@@ -92,6 +92,37 @@
             src: templates/nginx/default.j2
             dest: /etc/nginx/sites-available/default
           notify: restart nginx
+# WordPress
+        - name: Unzip WordPress
+          unarchive:
+            src: files/wordpress-5.3.2.zip
+            dest: /tmp
+            creates: /tmp/wordpress/wp-settings.php
+
+        - name: Create project folder
+          file:
+            dest: /var/www/book.example.com
+            state: directory
+
+        - name: Copy WordPress files
+          command: cp -a /tmp/wordpress/. /var/www/book.example.com
+          args:
+            creates: /var/www/book.example.com/wp-settings.php
+
+# Creation de la base de donnee de wordpress
+
+        - name: Create WordPress MySQL database
+          mysql_db:
+            name: wordpress
+            state: present
+
+        - name: Create WordPress MySQL user
+          mysql_user:
+            name: wordpress
+            host: localhost
+            password: bananas
+            priv: wordpress.*:ALL
+
 
       handlers:
         - name: restart nginx
