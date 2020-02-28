@@ -76,7 +76,6 @@
             src: templates/mysql/my.cnf.j2
             dest: /root/.my.cnf
 #NginX
-#Nginx
         - name: Install Nginx
           package:
             name: nginx
